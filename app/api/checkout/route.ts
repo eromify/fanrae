@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createCheckoutSession, getOrCreateCustomer } from '@/lib/stripe/checkout'
 import { getStripeServerClient } from '@/lib/stripe/server'
+import { createSupabaseServerClient } from '@/lib/supabase/client'
 
 /**
  * POST /api/checkout
@@ -27,24 +28,37 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // TODO: Get creator's Connect account ID from your database
-    // For now, this is a placeholder - you'll need to query your Supabase database
-    // const creator = await getCreatorFromDatabase(creatorId)
-    // if (!creator || !creator.stripe_connect_account_id) {
-    //   return NextResponse.json(
-    //     { error: 'Creator not found or not onboarded to Stripe' },
-    //     { status: 404 }
-    //   )
-    // }
-    
-    // TEMPORARY: You'll need to replace this with actual creator data from database
-    const creatorConnectAccountId = body.creatorConnectAccountId
-    if (!creatorConnectAccountId) {
+    const supabase = createSupabaseServerClient()
+
+    // Get creator's Connect account ID from database
+    const { data: creator, error: creatorError } = await supabase
+      .from('creators')
+      .select('id, stripe_connect_account_id, stripe_connect_onboarding_complete, is_active')
+      .eq('id', creatorId)
+      .single()
+
+    if (creatorError || !creator) {
       return NextResponse.json(
-        { error: 'Creator Connect account ID required. Replace this with database lookup.' },
+        { error: 'Creator not found' },
+        { status: 404 }
+      )
+    }
+
+    if (!creator.is_active) {
+      return NextResponse.json(
+        { error: 'Creator account is not active' },
         { status: 400 }
       )
     }
+
+    if (!creator.stripe_connect_account_id || !creator.stripe_connect_onboarding_complete) {
+      return NextResponse.json(
+        { error: 'Creator has not completed Stripe Connect onboarding' },
+        { status: 400 }
+      )
+    }
+
+    const creatorConnectAccountId = creator.stripe_connect_account_id
 
     // Get or create Stripe customer
     const customer = await getOrCreateCustomer(userId, userEmail, userName)
@@ -53,15 +67,14 @@ export async function POST(request: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
     // Create checkout session
-    // TODO: Update success/cancel URLs to match your actual routes
     const session = await createCheckoutSession({
       priceId,
       creatorConnectAccountId,
       customerId: customer.id,
       userId,
       creatorId,
-      successUrl: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancelUrl: `${baseUrl}/cancel`,
+      successUrl: `${baseUrl}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${baseUrl}/subscription/cancel`,
     })
 
     return NextResponse.json({ 
