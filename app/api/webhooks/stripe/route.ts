@@ -121,7 +121,6 @@ export async function POST(request: NextRequest) {
       
       // Save user subscription to database
       if (subscription.metadata?.creator_id && subscription.metadata?.user_id) {
-        const supabase = createSupabaseServerClient()
         const { error } = await supabase
           .from('user_subscriptions')
           .insert({
@@ -149,7 +148,6 @@ export async function POST(request: NextRequest) {
       console.log(`Subscription status is ${status}.`)
       
       // Update user subscription in database
-      const supabase = createSupabaseServerClient()
       const { error: updateError } = await supabase
         .from('user_subscriptions')
         .update({
@@ -175,7 +173,6 @@ export async function POST(request: NextRequest) {
       
       // Update database when creator completes onboarding
       if (account.details_submitted) {
-        const supabase = createSupabaseServerClient()
         const { error } = await supabase
           .from('creators')
           .update({ 
