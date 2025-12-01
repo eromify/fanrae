@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
   } else {
     // Otherwise use the basic event deserialized with JSON.parse
     const data = JSON.parse(body)
-    event = Stripe.Event.constructFrom(data, stripe)
+    event = data as Stripe.Event
   }
 
   let subscription: Stripe.Subscription
