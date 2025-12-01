@@ -72,13 +72,6 @@ export async function POST(request: NextRequest) {
       // handleSubscriptionUpdated(subscription);
       break
 
-    case 'entitlements.active_entitlement_summary.updated':
-      subscription = event.data.object as Stripe.Subscription
-      console.log(`Active entitlement summary updated for ${subscription.id}.`)
-      // Then define and call a method to handle active entitlement summary updated
-      // handleEntitlementUpdated(subscription);
-      break
-
     // Stripe Connect events
     case 'account.updated':
       const account = event.data.object as Stripe.Account
