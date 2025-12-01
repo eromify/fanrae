@@ -92,12 +92,6 @@ export async function POST(request: NextRequest) {
       // Creator received payout - 80% of revenue
       break
 
-    case 'transfer.failed':
-      const failedTransfer = event.data.object as Stripe.Transfer
-      console.log('Transfer failed (payout failed):', failedTransfer.id)
-      // Handle failed payout - notify creator
-      break
-
     default:
       // Unexpected event type
       console.log(`Unhandled event type ${event.type}.`)
