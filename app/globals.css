@@ -415,4 +415,162 @@ a {
   }
 }
 
+/* Creator Economy Section */
+.creator-economy-section {
+  width: 100%;
+  padding: 60px 40px;
+  background: #000000;
+}
+
+.creator-economy-content {
+  max-width: 1200px;
+  margin: 0 auto 60px auto;
+  text-align: center;
+}
+
+.creator-economy-header {
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #ffffff;
+  margin: 0 0 24px 0;
+}
+
+.creator-economy-subheader {
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #ffffff;
+  margin: 0 0 32px 0;
+}
+
+.btn-join-movement {
+  padding: 14px 32px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  background: #00d26a;
+  color: #000000;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.btn-join-movement:hover {
+  background: #00b85a;
+}
+
+.creator-economy-video {
+  width: 100%;
+  max-width: 500px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  border-radius: 16px;
+}
+
+/* Mobile Creator Economy */
+@media (max-width: 767px) {
+  .creator-economy-section {
+    padding: 40px 20px;
+  }
+
+  .creator-economy-content {
+    margin-bottom: 40px;
+  }
+
+  .creator-economy-header {
+    font-size: 32px;
+    margin-bottom: 16px;
+  }
+
+  .creator-economy-subheader {
+    font-size: 16px;
+    margin-bottom: 24px;
+  }
+
+  .btn-join-movement {
+    padding: 12px 24px;
+    font-size: 14px;
+  }
+
+  .creator-economy-video {
+    max-width: 90%;
+  }
+}
+
+/* Desktop Creator Economy */
+@media (min-width: 768px) {
+  .creator-economy-header {
+    font-size: 56px;
+  }
+
+  .creator-economy-subheader {
+    font-size: 22px;
+  }
+}
+
+/* Built For Every Niche Section */
+.built-for-section {
+  width: 100%;
+  padding: 60px 40px 100px 40px;
+  background: #000000;
+}
+
+.built-for-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.built-for-header {
+  font-size: 56px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #ffffff;
+  margin: 0 0 24px 0;
+}
+
+.built-for-subheader {
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #ffffff;
+  margin: 0 0 32px 0;
+}
+
+.built-for-subheader .green-text {
+  color: #00d26a;
+  font-weight: 500;
+}
+
+/* Mobile Built For Section */
+@media (max-width: 767px) {
+  .built-for-section {
+    padding: 40px 20px 80px 20px;
+  }
+
+  .built-for-header {
+    font-size: 32px;
+    margin-bottom: 16px;
+  }
+
+  .built-for-subheader {
+    font-size: 16px;
+    margin-bottom: 24px;
+  }
+}
+
+/* Desktop Built For Section */
+@media (min-width: 768px) {
+  .built-for-header {
+    font-size: 64px;
+  }
+
+  .built-for-subheader {
+    font-size: 22px;
+  }
+}
+
 

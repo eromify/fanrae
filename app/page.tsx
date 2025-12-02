@@ -1,6 +1,8 @@
 import Navbar from '@/components/Navbar'
 import Hero from '@/components/Hero'
 import Features from '@/components/Features'
+import CreatorEconomy from '@/components/CreatorEconomy'
+import BuiltForEveryNiche from '@/components/BuiltForEveryNiche'
 
 export default function Home() {
   return (
@@ -8,9 +10,8 @@ export default function Home() {
       <Navbar />
       <Hero />
       <Features />
-      <main className="landing-content">
-        {/* Content will be added here */}
-      </main>
+      <CreatorEconomy />
+      <BuiltForEveryNiche />
     </div>
   )
 }
