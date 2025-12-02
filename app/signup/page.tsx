@@ -1,23 +1,67 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
+import { createSupabaseClient } from '@/lib/supabase/client'
 
 export default function SignupPage() {
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleGoogleSignup = () => {
-    // TODO: Implement Google OAuth
-    console.log('Google signup clicked')
+  const handleGoogleSignup = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      const supabase = createSupabaseClient()
+      const redirectUrl =
+        process.env.NEXT_PUBLIC_APP_URL || `${window.location.origin}`
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${redirectUrl}/onboarding`,
+        },
+      })
+      if (error) throw error
+    } catch (err: any) {
+      setError(err.message || 'Failed to sign up with Google')
+      setIsLoading(false)
+    }
   }
 
-  const handleSignUp = (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: Implement email/password sign up
-    console.log('Sign up:', { email, password })
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const supabase = createSupabaseClient()
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      })
+
+      if (error) throw error
+
+      // If email confirmation is disabled in Supabase, session is created immediately
+      // If email confirmation is enabled, user will need to confirm email first
+      if (data.session) {
+        // User is signed in immediately - redirect to onboarding
+        router.push('/onboarding')
+      } else if (data.user) {
+        // Email confirmation is required
+        setError('Please check your email to confirm your account')
+        setIsLoading(false)
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to sign up')
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -39,7 +83,17 @@ export default function SignupPage() {
         </div>
 
         <div className="signup-content">
-          <button className="btn-google" onClick={handleGoogleSignup}>
+          {error && (
+            <div className="auth-error" role="alert">
+              {error}
+            </div>
+          )}
+
+          <button
+            className="btn-google"
+            onClick={handleGoogleSignup}
+            disabled={isLoading}
+          >
             <svg
               width="18"
               height="18"
@@ -64,7 +118,7 @@ export default function SignupPage() {
                 fill="#EA4335"
               />
             </svg>
-            Continue with Google
+            {isLoading ? 'Loading...' : 'Continue with Google'}
           </button>
 
           <div className="signup-divider">
@@ -137,8 +191,12 @@ export default function SignupPage() {
               </div>
             </div>
 
-            <button type="submit" className="btn-signup">
-              Sign Up
+            <button
+              type="submit"
+              className="btn-signup"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Signing up...' : 'Sign Up'}
             </button>
           </form>
 

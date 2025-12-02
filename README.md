@@ -32,8 +32,10 @@ A creator monetization platform where creators can create pages, upload content,
 
 3. **Set up Supabase**:
    - Create a new Supabase project
-   - Enable Google OAuth in Authentication > Providers
-   - Configure Google OAuth credentials
+   - Go to Authentication > Settings
+   - **Disable "Enable email confirmations"** (for MVP/testing - users can sign up immediately)
+   - Enable Google OAuth in Authentication > Providers (optional)
+   - Configure Google OAuth credentials (if using)
    - Copy your project URL and anon key to `.env.local`
 
 4. **Set up Stripe**:
