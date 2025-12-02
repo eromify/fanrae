@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+
 export default function CreatorEconomy() {
   return (
     <section className="creator-economy-section">
@@ -10,7 +12,7 @@ export default function CreatorEconomy() {
         <p className="creator-economy-subheader">
           We&apos;re powering the next era of independent success for all creators.
         </p>
-        <button className="btn-join-movement">Join the movement</button>
+        <Link href="/signup" className="btn-join-movement">Join the movement</Link>
       </div>
       <video
         className="creator-economy-video"

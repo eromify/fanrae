@@ -25,6 +25,18 @@ a {
   text-decoration: none;
 }
 
+/* Ensure links styled as buttons look identical to buttons */
+a.btn-signup,
+a.btn-login,
+a.btn-hero-primary,
+a.btn-hero-secondary,
+a.btn-join-movement,
+a.btn-signup-mobile,
+a.btn-login-mobile {
+  display: inline-block;
+  text-align: center;
+}
+
 /* Landing Page */
 .landing-page {
   min-height: 100vh;
@@ -67,6 +79,7 @@ a {
   .navbar-logo {
     display: flex;
     align-items: center;
+    text-decoration: none;
   }
 
   .navbar-logo img {
@@ -152,6 +165,7 @@ a {
   justify-content: center;
   grid-column: 2;
   justify-self: center;
+  text-decoration: none;
 }
 
 .navbar-logo-mobile img {

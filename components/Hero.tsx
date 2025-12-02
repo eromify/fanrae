@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+
 export default function Hero() {
   return (
     <>
@@ -20,8 +22,8 @@ export default function Hero() {
           Earn from your fanbase faster with the No.1 AI monetisation platform for creators.
         </h1>
         <div className="hero-buttons">
-          <button className="btn-hero-primary">Become a creator</button>
-          <button className="btn-hero-secondary">Sign up as a fan</button>
+          <Link href="/signup" className="btn-hero-primary">Become a creator</Link>
+          <Link href="/signup" className="btn-hero-secondary">Sign up as a fan</Link>
         </div>
       </div>
     </>
