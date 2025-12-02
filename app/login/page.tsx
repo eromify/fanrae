@@ -139,7 +139,7 @@ export default function LoginPage() {
           </form>
 
           <div className="signup-prompt">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/signup" className="signup-link">
               Create one now
             </Link>
