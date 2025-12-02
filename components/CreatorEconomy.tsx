@@ -8,7 +8,7 @@ export default function CreatorEconomy() {
           The Creator-AI Economy has arrived, and Fanrae hands you the tools to lead it.
         </h2>
         <p className="creator-economy-subheader">
-          We're powering the next era of independent success for all creators.
+          We&apos;re powering the next era of independent success for all creators.
         </p>
         <button className="btn-join-movement">Join the movement</button>
       </div>
