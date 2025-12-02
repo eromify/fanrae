@@ -39,7 +39,7 @@ export default function Navbar() {
           />
         </div>
         <button
-          className="btn-menu"
+          className={`btn-menu ${mobileMenuOpen ? 'menu-open' : ''}`}
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           aria-label="Toggle menu"
         >
@@ -51,10 +51,13 @@ export default function Navbar() {
         </button>
       </div>
 
-      {/* Mobile Menu (hidden for now as per requirements) */}
+      {/* Mobile Menu */}
       {mobileMenuOpen && (
         <div className="mobile-menu">
-          {/* Menu content will be added later */}
+          <div className="mobile-menu-actions">
+            <button className="btn-signup-mobile">Sign up</button>
+            <button className="btn-login-mobile">Login</button>
+          </div>
         </div>
       )}
     </nav>
