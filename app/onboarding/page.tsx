@@ -49,6 +49,11 @@ export default function OnboardingPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [showCreatorType, setShowCreatorType] = useState(false)
   const [selectedCreatorType, setSelectedCreatorType] = useState<'ai' | 'human' | null>(null)
+  const [showContentType, setShowContentType] = useState(false)
+  const [selectedContentType, setSelectedContentType] = useState<'18+' | 'general' | null>(null)
+  const [showDisplayName, setShowDisplayName] = useState(false)
+  const [displayName, setDisplayName] = useState('')
+  const [handle, setHandle] = useState('')
 
   useEffect(() => {
     checkAuth()
@@ -142,14 +147,137 @@ export default function OnboardingPage() {
         if (session?.user) {
           // Save creator type
           await saveCreatorType(session.user.id, selectedCreatorType)
-          // TODO: Navigate to payment page (when created)
-          // For now, just log
-          console.log('Creator type saved:', selectedCreatorType)
+          // Navigate to content type selection
+          setShowCreatorType(false)
+          setShowContentType(true)
         }
       } catch (error) {
         console.error('Failed to save creator type:', error)
       }
     }
+  }
+
+  const handleContentTypeSelect = (type: '18+' | 'general') => {
+    setSelectedContentType(type)
+  }
+
+  const handleContentTypeContinue = async () => {
+    if (selectedContentType) {
+      try {
+        const supabase = createSupabaseClient()
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+
+        if (session?.user) {
+          // TODO: Save content type to database
+          // Navigate to display name & handle step
+          setShowContentType(false)
+          setShowDisplayName(true)
+        }
+      } catch (error) {
+        console.error('Failed to save content type:', error)
+      }
+    }
+  }
+
+  const handleDisplayNameContinue = async () => {
+    if (displayName.trim() && handle.trim()) {
+      try {
+        const supabase = createSupabaseClient()
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+
+        if (session?.user) {
+          // Remove @ if user included it and trim whitespace
+          const cleanHandle = handle.replace(/^@/, '').trim().toLowerCase()
+
+          if (!cleanHandle) {
+            alert('Please enter a valid handle.')
+            return
+          }
+
+          // Validate handle format (alphanumeric and underscores only)
+          if (!/^[a-z0-9_]+$/.test(cleanHandle)) {
+            alert('Handle can only contain letters, numbers, and underscores.')
+            return
+          }
+
+          // Check if handle is already taken (excluding current user's creator profile)
+          const { data: creator } = await supabase
+            .from('creators')
+            .select('id')
+            .eq('user_id', session.user.id)
+            .single()
+
+          const { data: existingCreator } = await supabase
+            .from('creators')
+            .select('id')
+            .eq('username', cleanHandle)
+            .maybeSingle()
+
+          // If handle is taken by someone else (not the current user)
+          if (existingCreator && (!creator || existingCreator.id !== creator.id)) {
+            alert('This handle is already taken. Please choose another one.')
+            return
+          }
+
+          if (creator) {
+            // Update existing creator
+            const { error } = await supabase
+              .from('creators')
+              .update({
+                display_name: displayName.trim(),
+                username: cleanHandle,
+                page_url: `@${cleanHandle}`,
+              })
+              .eq('id', creator.id)
+
+            if (error) {
+              // Check if it's a unique constraint violation
+              if (error.code === '23505' || error.message?.includes('unique')) {
+                alert('This handle is already taken. Please choose another one.')
+                return
+              }
+              throw error
+            }
+          } else {
+            // Create new creator profile
+            const { error } = await supabase.from('creators').insert({
+              user_id: session.user.id,
+              display_name: displayName.trim(),
+              username: cleanHandle,
+              page_url: `@${cleanHandle}`,
+            })
+
+            if (error) {
+              // Check if it's a unique constraint violation
+              if (error.code === '23505' || error.message?.includes('unique')) {
+                alert('This handle is already taken. Please choose another one.')
+                return
+              }
+              throw error
+            }
+          }
+
+          // TODO: Navigate to payment page (when created)
+          console.log('Display name and handle saved')
+        }
+      } catch (error: any) {
+        console.error('Failed to save display name and handle:', error)
+        if (error.message?.includes('unique')) {
+          alert('This handle is already taken. Please choose another one.')
+        }
+      }
+    }
+  }
+
+  const handleSkip = async () => {
+    // Skip to next step (payment page when created)
+    // For now, just log
+    console.log('Skipped display name & handle')
+    // TODO: Navigate to payment page
   }
 
   if (isLoading) {
@@ -162,6 +290,311 @@ export default function OnboardingPage() {
 
   if (!isAuthenticated) {
     return null
+  }
+
+  // Show display name & handle page
+  if (showDisplayName) {
+    return (
+      <div className="onboarding-page onboarding-page-creator-type">
+        <div className="creator-type-container">
+          {/* Header with progress */}
+          <div className="creator-type-header">
+            <button
+              className="creator-type-back-btn"
+              onClick={() => {
+                setShowDisplayName(false)
+                setShowContentType(true)
+              }}
+              aria-label="Go back"
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M15 18L9 12L15 6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+            <div className="creator-type-title">Display name & handle</div>
+            <button
+              className="creator-type-close-btn"
+              onClick={() => router.push('/')}
+              aria-label="Close"
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M18 6L6 18M6 6L18 18"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* Progress dots */}
+          <div className="creator-type-progress">
+            {[0, 1, 2, 3, 4, 5, 6].map((index) => (
+              <div
+                key={index}
+                className={`progress-dot ${index === 2 ? 'active' : ''}`}
+              />
+            ))}
+          </div>
+
+          {/* Main content */}
+          <div className="creator-type-content display-name-content">
+            <h1 className="creator-type-heading display-name-heading">Create your name & handle</h1>
+
+            {/* Form fields */}
+            <div className="display-name-form">
+              <div className="form-field-group">
+                <label htmlFor="display-name" className="form-field-label">
+                  Display name
+                </label>
+                <input
+                  type="text"
+                  id="display-name"
+                  className="form-field-input"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="John Doe"
+                />
+                <p className="form-field-helper">
+                  The name shown on your profile and in messages.
+                </p>
+              </div>
+
+              <div className="form-field-group">
+                <label htmlFor="handle" className="form-field-label">
+                  Handle
+                </label>
+                <div className="handle-input-wrapper">
+                  <span className="handle-prefix">@</span>
+                  <input
+                    type="text"
+                    id="handle"
+                    className="form-field-input handle-input"
+                    value={handle}
+                    onChange={(e) => {
+                      // Remove @ if user types it, we'll add it automatically
+                      const value = e.target.value.replace(/^@/, '')
+                      setHandle(value)
+                    }}
+                    placeholder="generic_handle"
+                  />
+                </div>
+                <p className="form-field-helper">Your unique @username</p>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="display-name-actions">
+              <button
+                className="creator-type-continue-btn"
+                onClick={handleDisplayNameContinue}
+                disabled={!displayName.trim() || !handle.trim()}
+              >
+                Continue
+              </button>
+              <button
+                className="display-name-skip-btn"
+                onClick={handleSkip}
+              >
+                Skip for now
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show content type selection page
+  if (showContentType) {
+    return (
+      <div className="onboarding-page onboarding-page-creator-type">
+        <div className="creator-type-container">
+          {/* Header with progress */}
+          <div className="creator-type-header">
+            <button
+              className="creator-type-back-btn"
+              onClick={() => {
+                setShowContentType(false)
+                setShowCreatorType(true)
+              }}
+              aria-label="Go back"
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M15 18L9 12L15 6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+            <div className="creator-type-title">Content</div>
+            <button
+              className="creator-type-close-btn"
+              onClick={() => router.push('/')}
+              aria-label="Close"
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M18 6L6 18M6 6L18 18"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* Progress dots */}
+          <div className="creator-type-progress">
+            {[0, 1, 2, 3, 4, 5].map((index) => (
+              <div
+                key={index}
+                className={`progress-dot ${index === 1 ? 'active' : ''}`}
+              />
+            ))}
+          </div>
+
+          {/* Main content */}
+          <div className="creator-type-content">
+            <h1 className="creator-type-heading">What kind of content will you be creating?</h1>
+            <p className="creator-type-description">
+              We&apos;ll tailor your onboarding based on your content type.
+              There&apos;s no wrong choice - just pick what fits you best.
+            </p>
+
+            {/* Content type cards */}
+            <div className="creator-type-cards">
+              <button
+                className={`creator-type-card creator-type-card-ai ${
+                  selectedContentType === '18+' ? 'selected' : ''
+                }`}
+                onClick={() => handleContentTypeSelect('18+')}
+              >
+                <div className="creator-type-icon">
+                  <svg
+                    width="64"
+                    height="64"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    {/* Lock icon */}
+                    <rect
+                      x="5"
+                      y="11"
+                      width="14"
+                      height="10"
+                      rx="2"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    />
+                    <path
+                      d="M9 11V7C9 4.79 10.79 3 13 3C15.21 3 17 4.79 17 7V11"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                    <circle cx="12" cy="16" r="1.5" fill="currentColor" />
+                  </svg>
+                </div>
+                <h3 className="creator-type-card-title">18+ Content</h3>
+                <p className="creator-type-card-description">
+                  Your content includes nudity, adult themes, or is for mature audiences.
+                </p>
+              </button>
+
+              <button
+                className={`creator-type-card creator-type-card-human ${
+                  selectedContentType === 'general' ? 'selected' : ''
+                }`}
+                onClick={() => handleContentTypeSelect('general')}
+              >
+                <div className="creator-type-icon">
+                  <svg
+                    width="64"
+                    height="64"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M12 2L2 7L12 12L22 7L12 2Z"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M2 17L12 22L22 17"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M2 12L12 17L22 12"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
+                <h3 className="creator-type-card-title">General Content</h3>
+                <p className="creator-type-card-description">
+                  Your content will be suitable for all audiences of all ages.
+                </p>
+              </button>
+            </div>
+
+            {/* Continue button */}
+            <button
+              className="creator-type-continue-btn"
+              onClick={handleContentTypeContinue}
+              disabled={!selectedContentType}
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   // Show creator type selection page
