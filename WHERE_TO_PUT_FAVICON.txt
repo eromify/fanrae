@@ -1,0 +1,32 @@
+EXACT LOCATION FOR YOUR FAVICON/LOGO FILES:
+
+✅ CORRECT PATH:
+/Users/vincentcampbell/Desktop/fanrae dev/app/favicon.ico
+
+✅ CORRECT PATH:
+/Users/vincentcampbell/Desktop/fanrae dev/app/apple-icon.png
+
+✅ CORRECT PATH:
+/Users/vincentcampbell/Desktop/fanrae dev/app/opengraph-image.png
+
+
+📁 Folder Structure:
+fanrae dev/
+  ├── app/                    ← PUT YOUR FILES HERE!
+  │   ├── favicon.ico         ← Drop your favicon here
+  │   ├── apple-icon.png      ← Drop your apple icon here (if you have it)
+  │   ├── opengraph-image.png ← Drop your social media image here (if you have it)
+  │   ├── layout.tsx
+  │   ├── page.tsx
+  │   └── ...
+  ├── components/
+  ├── lib/
+  └── ...
+
+
+❌ WRONG - DON'T PUT HERE:
+fanrae dev/favicon.ico         ← NOT HERE!
+
+✅ RIGHT - PUT HERE:
+fanrae dev/app/favicon.ico     ← YES, HERE!
+
