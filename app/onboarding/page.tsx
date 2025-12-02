@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { createSupabaseClient } from '@/lib/supabase/client'
+import { checkCreatorStatus, saveCreatorType } from '@/lib/supabase/creator'
 
 interface OnboardingStep {
   icon: string
@@ -88,7 +89,23 @@ export default function OnboardingPage() {
       const {
         data: { session },
       } = await supabase.auth.getSession()
-      setIsAuthenticated(!!session)
+      
+      if (!session?.user) {
+        setIsAuthenticated(false)
+        setIsLoading(false)
+        return
+      }
+
+      setIsAuthenticated(true)
+
+      // Check if user is a paid creator - if so, redirect to app
+      const creatorStatus = await checkCreatorStatus(session.user.id)
+      if (creatorStatus.isCreator && creatorStatus.hasPaid) {
+        // Creator has paid - redirect to app (when it exists)
+        // For now, redirect to home
+        router.push('/')
+        return
+      }
     } catch (error) {
       console.error('Auth check failed:', error)
       setIsAuthenticated(false)
@@ -114,10 +131,24 @@ export default function OnboardingPage() {
     setSelectedCreatorType(type)
   }
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (selectedCreatorType) {
-      // TODO: Save creator type and navigate to next step
-      console.log('Creator type selected:', selectedCreatorType)
+      try {
+        const supabase = createSupabaseClient()
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+
+        if (session?.user) {
+          // Save creator type
+          await saveCreatorType(session.user.id, selectedCreatorType)
+          // TODO: Navigate to payment page (when created)
+          // For now, just log
+          console.log('Creator type saved:', selectedCreatorType)
+        }
+      } catch (error) {
+        console.error('Failed to save creator type:', error)
+      }
     }
   }
 

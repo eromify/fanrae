@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { createSupabaseClient } from '@/lib/supabase/client'
+import { checkCreatorStatus } from '@/lib/supabase/creator'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -21,6 +22,7 @@ export default function LoginPage() {
       const supabase = createSupabaseClient()
       const redirectUrl =
         process.env.NEXT_PUBLIC_APP_URL || `${window.location.origin}`
+      // Redirect to onboarding - it will check payment status and redirect accordingly
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -48,9 +50,21 @@ export default function LoginPage() {
 
       if (error) throw error
 
-      // Redirect to onboarding after successful login
-      if (data.session) {
-        router.push('/onboarding')
+      // Check creator status and redirect accordingly
+      if (data.session?.user) {
+        const creatorStatus = await checkCreatorStatus(data.session.user.id)
+        
+        if (creatorStatus.isCreator && creatorStatus.hasPaid) {
+          // Creator has paid - redirect to app (when it exists)
+          // For now, redirect to home
+          router.push('/')
+        } else if (creatorStatus.isCreator && !creatorStatus.hasPaid) {
+          // Creator hasn't paid - redirect to onboarding to complete payment
+          router.push('/onboarding')
+        } else {
+          // Not a creator yet - redirect to onboarding
+          router.push('/onboarding')
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Failed to sign in')
