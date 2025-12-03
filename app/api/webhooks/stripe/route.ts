@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
         if (session.metadata?.user_id && session.metadata?.creator_id) {
           const { error: subError } = await supabase
             .from('user_subscriptions')
-            .insert({
+            .upsert({
               user_id: session.metadata.user_id,
               creator_id: session.metadata.creator_id,
               stripe_subscription_id: subscriptionObj.id,
@@ -63,9 +63,9 @@ export async function POST(request: NextRequest) {
               current_period_start: new Date(subscriptionObj.current_period_start * 1000).toISOString(),
               current_period_end: new Date(subscriptionObj.current_period_end * 1000).toISOString(),
               cancel_at_period_end: subscriptionObj.cancel_at_period_end || false,
+            }, {
+              onConflict: 'stripe_subscription_id'
             })
-            .onConflict('stripe_subscription_id')
-            .merge()
           
           if (subError) {
             console.error('Error saving user subscription:', subError)
