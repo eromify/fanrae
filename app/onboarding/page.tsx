@@ -105,7 +105,7 @@ export default function OnboardingPage() {
     return () => {
       clearInterval(interval)
     }
-  }, [isAuthenticated, isLoading, showCreatorType])
+  }, [isAuthenticated, isLoading, showCreatorType, showWelcomePage])
 
   const checkAuth = async () => {
     try {

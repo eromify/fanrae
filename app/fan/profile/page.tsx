@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { createSupabaseClient } from '@/lib/supabase/client'
 
 interface Creator {
@@ -167,9 +168,11 @@ export default function ProfilePage() {
               {following.map((item) => (
                 <div key={item.creator_id} className="profile-following-item">
                   {item.creator.profile_image_url ? (
-                    <img
+                    <Image
                       src={item.creator.profile_image_url}
                       alt={item.creator.display_name || item.creator.username}
+                      width={48}
+                      height={48}
                       className="profile-following-avatar"
                     />
                   ) : (
@@ -192,7 +195,7 @@ export default function ProfilePage() {
 
           {isFollowingExpanded && following.length === 0 && (
             <div className="profile-following-empty">
-              You're not following anyone yet
+              You&apos;re not following anyone yet
             </div>
           )}
         </div>
@@ -232,10 +235,13 @@ export default function ProfilePage() {
               {likes.map((like) => (
                 <div key={like.like_id} className="profile-likes-item">
                   {like.post.media_type === 'image' ? (
-                    <img
+                    <Image
                       src={like.post.media_url}
                       alt={like.post.title}
+                      width={150}
+                      height={150}
                       className="profile-likes-media"
+                      style={{ objectFit: 'cover', width: '100%', height: '100%' }}
                     />
                   ) : (
                     <video
@@ -260,7 +266,7 @@ export default function ProfilePage() {
 
           {isLikesExpanded && likes.length === 0 && (
             <div className="profile-following-empty">
-              You haven't liked any posts yet
+              You haven&apos;t liked any posts yet
             </div>
           )}
         </div>

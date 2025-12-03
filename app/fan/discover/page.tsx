@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Image from 'next/image'
 import { useDebounce } from '@/hooks/useDebounce'
 
 interface Creator {
@@ -99,9 +100,11 @@ export default function DiscoverPage() {
                 {creators.map((creator) => (
                   <div key={creator.id} className="discover-creator-item">
                     {creator.profile_image_url ? (
-                      <img
+                      <Image
                         src={creator.profile_image_url}
                         alt={creator.display_name || creator.username}
+                        width={56}
+                        height={56}
                         className="discover-creator-avatar"
                       />
                     ) : (
@@ -127,7 +130,7 @@ export default function DiscoverPage() {
               </div>
             ) : (
               <div className="discover-empty">
-                No creators found matching "{searchQuery}"
+                No creators found matching &quot;{searchQuery}&quot;
               </div>
             )}
           </div>
