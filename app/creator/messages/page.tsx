@@ -404,20 +404,20 @@ export default function CreatorMessagesPage() {
                     {otherUser.profile_image_url ? (
                       <Image
                         src={otherUser.profile_image_url}
-                        alt={isCreator ? (otherUser.display_name || otherUser.username) : otherUser.username}
+                        alt={('display_name' in otherUser && otherUser.display_name) ? otherUser.display_name : otherUser.username}
                         width={40}
                         height={40}
                         className="creator-messages-chat-header-avatar-image"
                       />
                     ) : (
                       <div className="creator-messages-chat-header-avatar-placeholder">
-                        {(isCreator ? (otherUser.display_name?.[0] || otherUser.username[0]) : otherUser.username[0] || '?').toUpperCase()}
+                        {(('display_name' in otherUser && otherUser.display_name?.[0]) || otherUser.username[0] || '?').toUpperCase()}
                       </div>
                     )}
                   </div>
                   <div className="creator-messages-chat-header-info">
                     <div className="creator-messages-chat-header-name">
-                      {isCreator ? (otherUser.display_name || otherUser.username) : otherUser.username}
+                      {('display_name' in otherUser && otherUser.display_name) ? otherUser.display_name : otherUser.username}
                     </div>
                     <div className="creator-messages-chat-header-username">
                       @{otherUser.username}
