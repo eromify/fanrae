@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
   const supabase = createSupabaseServerClient()
 
   // Handle the event
-  switch (event.type) {
+  switch (event.type as string) {
     case 'checkout.session.completed':
       const session = event.data.object as Stripe.Checkout.Session
       console.log('Checkout session completed:', session.id)
