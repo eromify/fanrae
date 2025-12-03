@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createSupabaseClient } from '@/lib/supabase/client'
 import AppSidebar from '@/components/AppSidebar'
 
-export default function AppLayout({
+export default function CreatorLayout({
   children,
 }: {
   children: React.ReactNode
@@ -14,6 +14,7 @@ export default function AppLayout({
   const [isLoading, setIsLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [userType, setUserType] = useState<'fan' | 'creator' | null>(null)
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false)
 
   useEffect(() => {
     checkAuth()
@@ -25,6 +26,13 @@ export default function AppLayout({
       router.push('/login')
     }
   }, [isLoading, isAuthenticated, router])
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && userType === 'creator' && !hasActiveSubscription) {
+      // Redirect to onboarding/payment if creator doesn't have active subscription
+      router.push('/onboarding')
+    }
+  }, [isLoading, isAuthenticated, userType, hasActiveSubscription, router])
 
   const checkAuth = async () => {
     try {
@@ -50,10 +58,38 @@ export default function AppLayout({
 
       if (profile?.user_type === 'creator') {
         setUserType('creator')
-        // Redirect creators to creator app
-        router.push('/creator/home')
+
+        // Check if creator has an active subscription
+        // First, get the creator record
+        const { data: creator } = await supabase
+          .from('creators')
+          .select('id')
+          .eq('user_id', session.user.id)
+          .single()
+
+        if (creator) {
+          // Check for active subscription in creator_subscriptions table
+          const { data: subscription, error: subError } = await supabase
+            .from('creator_subscriptions')
+            .select('status')
+            .eq('creator_id', creator.id)
+            .eq('status', 'active')
+            .maybeSingle()
+
+          // If subscription exists and is active, allow access
+          if (subscription && !subError) {
+            setHasActiveSubscription(true)
+          } else {
+            setHasActiveSubscription(false)
+          }
+        } else {
+          // No creator record yet, needs onboarding
+          setHasActiveSubscription(false)
+        }
       } else {
         setUserType('fan')
+        // Redirect fans to fan app
+        router.push('/fan/home')
       }
     } catch (error) {
       console.error('Auth check failed:', error)
@@ -71,7 +107,7 @@ export default function AppLayout({
     )
   }
 
-  if (!isAuthenticated || !userType) {
+  if (!isAuthenticated || userType !== 'creator' || !hasActiveSubscription) {
     return null
   }
 

@@ -51,8 +51,16 @@ export default function SignupPage() {
       // If email confirmation is disabled in Supabase, session is created immediately
       // If email confirmation is enabled, user will need to confirm email first
       if (data.session) {
-        // User is signed in immediately - redirect to onboarding
-        router.push('/onboarding')
+        // Check for redirect parameter
+        const urlParams = new URLSearchParams(window.location.search)
+        const redirect = urlParams.get('redirect')
+        
+        if (redirect) {
+          router.push(redirect)
+        } else {
+          // User is signed in immediately - redirect to onboarding
+          router.push('/onboarding')
+        }
       } else if (data.user) {
         // Email confirmation is required
         setError('Please check your email to confirm your account')

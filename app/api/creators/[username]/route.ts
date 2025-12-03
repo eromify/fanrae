@@ -40,7 +40,7 @@ export async function GET(
     // Get creator by username
     const { data: creator, error } = await supabase
       .from('creators')
-      .select('id, username, page_url, display_name, bio, profile_image_url, is_active')
+      .select('id, username, page_url, display_name, bio, profile_image_url, banner_image_url, subscription_price, instagram_url, twitter_url, is_active')
       .eq('username', cleanUsername)
       .eq('is_active', true)
       .single()
@@ -52,12 +52,8 @@ export async function GET(
       )
     }
 
-    // Generate full link
-    const fullLink = `${baseUrl}/${creator.page_url}`
-
     return NextResponse.json({
-      ...creator,
-      link: fullLink,
+      creator: creator
     })
   } catch (error: any) {
     console.error('Error in GET /api/creators/[username]:', error)

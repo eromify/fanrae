@@ -55,14 +55,44 @@ export default function LoginPage() {
         const creatorStatus = await checkCreatorStatus(data.session.user.id)
         
         if (creatorStatus.isCreator && creatorStatus.hasPaid) {
-          // Creator has paid - redirect to app (when it exists)
-          // For now, redirect to home
-          router.push('/')
+          // Creator has paid - redirect directly to creator app
+          router.push('/creator/home')
         } else if (creatorStatus.isCreator && !creatorStatus.hasPaid) {
           // Creator hasn't paid - redirect to onboarding to complete payment
           router.push('/onboarding')
         } else {
-          // Not a creator yet - redirect to onboarding
+          // Check if user_type is creator (might have subscription but checkCreatorStatus failed)
+          const supabase = createSupabaseClient()
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('user_type')
+            .eq('id', data.session.user.id)
+            .single()
+
+          if (profile?.user_type === 'creator') {
+            // User is marked as creator, check subscription directly
+            const { data: creator } = await supabase
+              .from('creators')
+              .select('id')
+              .eq('user_id', data.session.user.id)
+              .single()
+
+            if (creator) {
+              const { data: subscription } = await supabase
+                .from('creator_subscriptions')
+                .select('status')
+                .eq('creator_id', creator.id)
+                .eq('status', 'active')
+                .maybeSingle()
+
+              if (subscription) {
+                // Has active subscription - redirect to creator app
+                router.push('/creator/home')
+                return
+              }
+            }
+          }
+          // Not a creator yet or no active subscription - redirect to onboarding
           router.push('/onboarding')
         }
       }

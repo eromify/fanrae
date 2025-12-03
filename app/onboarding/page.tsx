@@ -122,13 +122,44 @@ export default function OnboardingPage() {
 
       setIsAuthenticated(true)
 
-      // Check if user is a paid creator - if so, redirect to app
+      // Check if user is a paid creator - if so, redirect to creator app
       const creatorStatus = await checkCreatorStatus(session.user.id)
       if (creatorStatus.isCreator && creatorStatus.hasPaid) {
-        // Creator has paid - redirect to app (when it exists)
-        // For now, redirect to home
-        router.push('/')
+        // Creator has paid - redirect directly to creator app
+        router.push('/creator/home')
         return
+      }
+
+      // Also check if user_type is creator (even if no subscription yet)
+      // This handles the case where user_type is set but subscription check might fail
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('user_type')
+        .eq('id', session.user.id)
+        .single()
+
+      if (profile?.user_type === 'creator') {
+        // Check again for active subscription with more detailed check
+        const { data: creator } = await supabase
+          .from('creators')
+          .select('id')
+          .eq('user_id', session.user.id)
+          .single()
+
+        if (creator) {
+          const { data: subscription } = await supabase
+            .from('creator_subscriptions')
+            .select('status')
+            .eq('creator_id', creator.id)
+            .eq('status', 'active')
+            .maybeSingle()
+
+          if (subscription) {
+            // Has active subscription - redirect to creator app
+            router.push('/creator/home')
+            return
+          }
+        }
       }
     } catch (error) {
       console.error('Auth check failed:', error)
