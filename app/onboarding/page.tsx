@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { createSupabaseClient } from '@/lib/supabase/client'
-import { checkCreatorStatus, saveCreatorType } from '@/lib/supabase/creator'
+import { checkCreatorStatus, saveCreatorType, saveSubscriptionPrice } from '@/lib/supabase/creator'
 
 interface OnboardingStep {
   icon: string
@@ -44,7 +44,7 @@ const onboardingSteps: OnboardingStep[] = [
 
 export default function OnboardingPage() {
   const router = useRouter()
-  const [currentStep, setCurrentStep] = useState(1) // Start with second page (index 1)
+  const [currentStep, setCurrentStep] = useState(0) // Start with first page (index 0)
   const [isLoading, setIsLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [showCreatorType, setShowCreatorType] = useState(false)
@@ -54,10 +54,32 @@ export default function OnboardingPage() {
   const [showDisplayName, setShowDisplayName] = useState(false)
   const [displayName, setDisplayName] = useState('')
   const [handle, setHandle] = useState('')
+  const [showSubscriptionPrice, setShowSubscriptionPrice] = useState(false)
+  const [subscriptionPrice, setSubscriptionPrice] = useState('9.99')
+  const [showPlans, setShowPlans] = useState(false)
+  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual' | null>(null)
+  const [timeRemaining, setTimeRemaining] = useState(24 * 60 * 60) // 24 hours in seconds
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
 
   useEffect(() => {
     checkAuth()
   }, [])
+
+  // Countdown timer for annual plan offer
+  useEffect(() => {
+    if (showPlans) {
+      const interval = setInterval(() => {
+        setTimeRemaining((prev) => {
+          if (prev <= 1) {
+            return 24 * 60 * 60 // Reset to 24 hours
+          }
+          return prev - 1
+        })
+      }, 1000)
+
+      return () => clearInterval(interval)
+    }
+  }, [showPlans])
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -66,15 +88,10 @@ export default function OnboardingPage() {
   }, [isLoading, isAuthenticated, router])
 
   useEffect(() => {
-    // Auto-slide for mobile only (skip if showing creator type selection)
+    // Auto-slide for both desktop and mobile (skip if showing creator type selection)
     if (!isAuthenticated || isLoading || showCreatorType) return
 
-    // Check if we're on mobile
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
-
-    if (!isMobile) return // Don't auto-slide on desktop
-
-    // Set up auto-slide interval for mobile
+    // Set up auto-slide interval
     const interval = setInterval(() => {
       setCurrentStep((prev) => {
         const next = (prev + 1) % onboardingSteps.length
@@ -261,7 +278,9 @@ export default function OnboardingPage() {
             }
           }
 
-          // TODO: Navigate to payment page (when created)
+          // Navigate to subscription price page
+          setShowDisplayName(false)
+          setShowSubscriptionPrice(true)
           console.log('Display name and handle saved')
         }
       } catch (error: any) {
@@ -274,10 +293,115 @@ export default function OnboardingPage() {
   }
 
   const handleSkip = async () => {
-    // Skip to next step (payment page when created)
-    // For now, just log
+    // Navigate to subscription price page
+    setShowDisplayName(false)
+    setShowSubscriptionPrice(true)
     console.log('Skipped display name & handle')
-    // TODO: Navigate to payment page
+  }
+
+  const handleSubscriptionPriceContinue = async () => {
+    if (!subscriptionPrice) return
+
+    const price = parseFloat(subscriptionPrice)
+    if (isNaN(price) || price < 3.99 || price > 100.00) {
+      alert('Please enter a valid price between $3.99 and $100.00')
+      return
+    }
+
+    try {
+      const supabase = createSupabaseClient()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (session?.user) {
+        const result = await saveSubscriptionPrice(session.user.id, price)
+        
+        if (result.success) {
+          console.log('Subscription price saved:', price)
+          setShowSubscriptionPrice(false)
+          setShowPlans(true)
+        } else {
+          alert(result.error || 'Failed to save subscription price')
+        }
+      }
+    } catch (error: any) {
+      console.error('Failed to save subscription price:', error)
+      alert('Failed to save subscription price. Please try again.')
+    }
+  }
+
+  const handleSubscriptionPriceSkip = () => {
+    setShowSubscriptionPrice(false)
+    setShowPlans(true)
+    console.log('Skipped subscription price')
+  }
+
+  const handlePlanSelect = (plan: 'monthly' | 'annual') => {
+    setSelectedPlan(plan)
+  }
+
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    const secs = seconds % 60
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+  }
+
+  const handlePlanContinue = (plan?: 'monthly' | 'annual') => {
+    const planToUse = plan || selectedPlan
+    if (planToUse) {
+      if (plan) {
+        setSelectedPlan(plan)
+      }
+      setShowPaymentModal(true)
+    }
+  }
+
+  const handleClosePaymentModal = () => {
+    setShowPaymentModal(false)
+  }
+
+  const handleContinueToCheckout = async () => {
+    if (!selectedPlan) return
+
+    try {
+      // Get current user
+      const supabase = createSupabaseClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        alert('Please log in to continue')
+        return
+      }
+
+      // Create checkout session
+      const response = await fetch('/api/creator-subscription-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          plan: selectedPlan,
+          userId: user.id,
+          userEmail: user.email,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create checkout session')
+      }
+
+      if (data.url) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.url
+      }
+    } catch (error: any) {
+      console.error('Error creating checkout session:', error)
+      alert(error.message || 'Failed to proceed to checkout. Please try again.')
+    }
   }
 
   if (isLoading) {
@@ -290,6 +414,450 @@ export default function OnboardingPage() {
 
   if (!isAuthenticated) {
     return null
+  }
+
+  // Payment Modal Component (will be rendered inside plans page)
+  const renderPaymentModal = () => {
+    if (!showPaymentModal || !selectedPlan) return null
+
+    const planName = selectedPlan === 'annual' ? 'Creator Annual Plan' : 'Creator Monthly Plan'
+    const planPrice = selectedPlan === 'annual' ? '6.66' : '19.99'
+    const originalPrice = selectedPlan === 'annual' ? '29.99' : null
+    const savings = selectedPlan === 'annual' ? '70%' : null
+    const subscriptionType = selectedPlan === 'annual' ? 'Annual subscription' : 'Monthly subscription'
+    const dollarAmount = selectedPlan === 'annual' ? '$6.66' : '$19.99'
+
+    return (
+      <div className="payment-modal-overlay">
+        <div className="payment-modal">
+          <div className="payment-modal-header">
+            <div>
+              <h2 className="payment-modal-title">Complete Your Purchase</h2>
+              <p className="payment-modal-subtitle">{planName} - ${planPrice}/month</p>
+            </div>
+            <button className="payment-modal-close" onClick={handleClosePaymentModal}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          </div>
+
+          <div className="payment-modal-content">
+            <div className="payment-plan-section">
+              <h3 className="payment-plan-name">{planName}</h3>
+              <p className="payment-subscription-type">{subscriptionType}</p>
+              <div className="payment-plan-pricing">
+                <div className={`payment-plan-left ${!originalPrice ? 'payment-plan-left-empty' : ''}`}>
+                  {originalPrice && (
+                    <>
+                      <span className="payment-original-price">${originalPrice}</span>
+                      <span className="payment-savings-badge">SAVE {savings}</span>
+                    </>
+                  )}
+                </div>
+                <div className="payment-plan-right">
+                  <div className="payment-price-display">
+                    <span className="payment-dollar-amount">{dollarAmount}</span>
+                    <span className="payment-period">per month</span>
+                  </div>
+                </div>
+              </div>
+              <ul className="payment-plan-features">
+                <li className="payment-feature">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 6L9 17L4 12" stroke="#00d26a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <span>Instant weekly payouts</span>
+                </li>
+                <li className="payment-feature">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 6L9 17L4 12" stroke="#00d26a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <span>Personal checkout links</span>
+                </li>
+                <li className="payment-feature">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 6L9 17L4 12" stroke="#00d26a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <span>AI Analytics Dashboard</span>
+                </li>
+                <li className="payment-feature">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 6L9 17L4 12" stroke="#00d26a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <span>AI Smart Messaging – auto-reply + upsell assistant</span>
+                </li>
+                <li className="payment-feature">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 6L9 17L4 12" stroke="#00d26a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <span>Unlimited custom tip menus</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="payment-method-section">
+              <h3 className="payment-method-title">Payment Method</h3>
+              <div className="payment-method-card">
+                <div className="payment-method-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="2" y="6" width="20" height="12" rx="2" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M2 10H22" stroke="currentColor" strokeWidth="2"/>
+                    <circle cx="7" cy="14" r="1" fill="currentColor"/>
+                    <circle cx="10" cy="14" r="1" fill="currentColor"/>
+                  </svg>
+                </div>
+                <div className="payment-method-info">
+                  <div className="payment-method-name">Credit Card / PayPal</div>
+                  <div className="payment-method-description">Secure payment via credit card, debit card, or PayPal</div>
+                </div>
+              </div>
+              <ul className="payment-method-features">
+                <li className="payment-feature">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 6L9 17L4 12" stroke="#00d26a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <span>Instant activation</span>
+                </li>
+                <li className="payment-feature">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 6L9 17L4 12" stroke="#00d26a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <span>Visa, Mastercard, AmEx, Discover, PayPal</span>
+                </li>
+                <li className="payment-feature">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 6L9 17L4 12" stroke="#00d26a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <span>Secure & encrypted</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <button className="payment-checkout-btn" onClick={handleContinueToCheckout}>
+            Continue to Checkout
+          </button>
+
+          <div className="payment-modal-footer">
+            <p className="payment-footer-text">
+              By continuing, you agree to our Terms of Service and Privacy Policy
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show plans page
+  if (showPlans) {
+    return (
+      <div className="onboarding-page onboarding-page-creator-type onboarding-page-plans">
+        <div className="creator-type-container">
+          {/* Header with progress */}
+          <div className="creator-type-header">
+            <button
+              className="creator-type-back-btn"
+              onClick={() => {
+                setShowPlans(false)
+                setShowSubscriptionPrice(true)
+              }}
+              aria-label="Go back"
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M15 18L9 12L15 6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+            <div className="creator-type-title">Choose your plan</div>
+            <button
+              className="creator-type-close-btn"
+              onClick={() => router.push('/')}
+              aria-label="Close"
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M18 6L6 18M6 6L18 18"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* Progress dots */}
+          <div className="creator-type-progress">
+            {[0, 1, 2, 3, 4].map((index) => (
+              <div
+                key={index}
+                className={`progress-dot ${index === 4 ? 'active' : ''}`}
+              />
+            ))}
+          </div>
+
+          {/* Main content */}
+          <div className="creator-type-content plans-content">
+            <h1 className="creator-type-heading">Choose your plan</h1>
+            <p className="creator-type-description">
+              Select the plan that works best for you. You can change or cancel anytime.
+            </p>
+
+            {/* Plan cards */}
+            <div className="plans-cards">
+              <div className="plan-card plan-card-annual">
+                <div className="plan-header">
+                  <h3 className="plan-title">Creator Annual Plan</h3>
+                  <div className="plan-price">
+                    <span className="plan-amount">$6.66</span>
+                    <span className="plan-period">/month</span>
+                  </div>
+                  <div className="plan-savings">
+                    <span className="plan-original-price">$29.99</span>
+                    <span className="plan-savings-badge">SAVE 70%</span>
+                  </div>
+                </div>
+                <div className="plan-offer">
+                  <span className="plan-offer-emoji">🔥</span>
+                  <span className="plan-offer-text">Offer ends in {formatTime(timeRemaining)}</span>
+                </div>
+                <ul className="plan-features">
+                  <li className="plan-feature">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="#00d26a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <span>Instant weekly payouts</span>
+                  </li>
+                  <li className="plan-feature">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="#00d26a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <span>Personal checkout links</span>
+                  </li>
+                  <li className="plan-feature">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="#00d26a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <span>AI Analytics Dashboard</span>
+                  </li>
+                  <li className="plan-feature">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="#00d26a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <span>AI Smart Messaging – auto-reply + upsell assistant</span>
+                  </li>
+                  <li className="plan-feature">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="#00d26a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <span>Unlimited custom tip menus</span>
+                  </li>
+                </ul>
+                <button
+                  className="plan-cta-button"
+                  onClick={() => {
+                    handlePlanContinue('annual')
+                  }}
+                >
+                  Get Started
+                </button>
+              </div>
+
+              <div className="plan-card plan-card-monthly">
+                <div className="plan-header">
+                  <h3 className="plan-title">Creator Monthly Plan</h3>
+                  <div className="plan-price">
+                    <span className="plan-amount">$19.99</span>
+                    <span className="plan-period">/month</span>
+                  </div>
+                </div>
+                <ul className="plan-features plan-features-monthly">
+                  <li className="plan-feature">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="#00d26a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <span>Instant weekly payouts</span>
+                  </li>
+                  <li className="plan-feature">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="#00d26a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <span>Personal checkout links</span>
+                  </li>
+                  <li className="plan-feature">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="#00d26a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <span>AI Analytics Dashboard</span>
+                  </li>
+                  <li className="plan-feature">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="#00d26a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <span>AI Smart Messaging – auto-reply + upsell assistant</span>
+                  </li>
+                  <li className="plan-feature">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 6L9 17L4 12" stroke="#00d26a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <span>Unlimited custom tip menus</span>
+                  </li>
+                </ul>
+                <button
+                  className="plan-cta-button plan-cta-button-monthly"
+                  onClick={() => {
+                    handlePlanContinue('monthly')
+                  }}
+                >
+                  Select
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Payment Modal - rendered as overlay on top of plans page */}
+        {renderPaymentModal()}
+      </div>
+    )
+  }
+
+  // Show subscription price page
+  if (showSubscriptionPrice) {
+    return (
+      <div className="onboarding-page onboarding-page-creator-type">
+        <div className="creator-type-container">
+          {/* Header with progress */}
+          <div className="creator-type-header">
+            <button
+              className="creator-type-back-btn"
+              onClick={() => {
+                setShowSubscriptionPrice(false)
+                setShowDisplayName(true)
+              }}
+              aria-label="Go back"
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M15 18L9 12L15 6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+            <div className="creator-type-title">Subscription price</div>
+            <button
+              className="creator-type-close-btn"
+              onClick={() => router.push('/')}
+              aria-label="Close"
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M18 6L6 18M6 6L18 18"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* Progress dots */}
+          <div className="creator-type-progress">
+            {[0, 1, 2, 3, 4].map((index) => (
+              <div
+                key={index}
+                className={`progress-dot ${index === 3 ? 'active' : ''}`}
+              />
+            ))}
+          </div>
+
+          {/* Main content */}
+          <div className="creator-type-content display-name-content">
+            <h1 className="creator-type-heading display-name-heading">Set your subscription price</h1>
+            <p className="creator-type-description">
+              Set your monthly Subscription price for fans, don't worry you will be able to change this later.
+            </p>
+
+            {/* Form fields */}
+            <div className="display-name-form subscription-price-form">
+              <div className="form-field-group">
+                <div className="subscription-price-input-wrapper">
+                  <span className="subscription-price-prefix">$</span>
+                  <input
+                    type="number"
+                    id="subscription-price"
+                    className="form-field-input subscription-price-input"
+                    value={subscriptionPrice}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      // Allow empty, or valid number
+                      if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                        setSubscriptionPrice(value)
+                      }
+                    }}
+                    placeholder="9.99"
+                    min="3.99"
+                    max="100.00"
+                    step="0.01"
+                  />
+                </div>
+                <p className="form-field-helper">Minimum $3.99. Maximum $100.00.</p>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="display-name-actions subscription-price-actions">
+              <button
+                className="creator-type-continue-btn"
+                onClick={handleSubscriptionPriceContinue}
+                disabled={!subscriptionPrice || parseFloat(subscriptionPrice) < 3.99 || parseFloat(subscriptionPrice) > 100.00}
+              >
+                Continue
+              </button>
+              <button
+                className="display-name-skip-btn"
+                onClick={handleSubscriptionPriceSkip}
+              >
+                Skip for now
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   // Show display name & handle page
@@ -349,7 +917,7 @@ export default function OnboardingPage() {
 
           {/* Progress dots */}
           <div className="creator-type-progress">
-            {[0, 1, 2, 3, 4, 5, 6].map((index) => (
+            {[0, 1, 2, 3, 4].map((index) => (
               <div
                 key={index}
                 className={`progress-dot ${index === 2 ? 'active' : ''}`}
@@ -482,7 +1050,7 @@ export default function OnboardingPage() {
 
           {/* Progress dots */}
           <div className="creator-type-progress">
-            {[0, 1, 2, 3, 4, 5].map((index) => (
+            {[0, 1, 2, 3, 4].map((index) => (
               <div
                 key={index}
                 className={`progress-dot ${index === 1 ? 'active' : ''}`}

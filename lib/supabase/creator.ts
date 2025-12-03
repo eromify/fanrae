@@ -83,3 +83,55 @@ export async function saveCreatorType(
   return { success: true }
 }
 
+/**
+ * Save subscription price
+ */
+export async function saveSubscriptionPrice(
+  userId: string,
+  price: number
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createSupabaseClient()
+
+  // Validate price range
+  if (price < 3.99 || price > 100.00) {
+    return { success: false, error: 'Price must be between $3.99 and $100.00' }
+  }
+
+  // Check if creator profile exists
+  const { data: existingCreator } = await supabase
+    .from('creators')
+    .select('id')
+    .eq('user_id', userId)
+    .single()
+
+  if (existingCreator) {
+    // Update existing creator with subscription price
+    const { error } = await supabase
+      .from('creators')
+      .update({ subscription_price: price })
+      .eq('id', existingCreator.id)
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+  } else {
+    // Create new creator profile with subscription price
+    // Note: This should ideally not happen here as creator profile should exist by this point
+    // But we'll handle it gracefully
+    const { error } = await supabase
+      .from('creators')
+      .insert({
+        user_id: userId,
+        subscription_price: price,
+        username: `user_${userId.substring(0, 8)}`,
+        page_url: `/user_${userId.substring(0, 8)}`,
+      })
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+  }
+
+  return { success: true }
+}
+

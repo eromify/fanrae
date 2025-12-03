@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS creators (
   is_active BOOLEAN DEFAULT true,
   subscription_status TEXT DEFAULT 'inactive' CHECK (subscription_status IN ('active', 'inactive', 'cancelled')),
   creator_type TEXT CHECK (creator_type IN ('ai', 'human')), -- AI Creator or Human Creator
+  subscription_price DECIMAL(10, 2), -- Monthly subscription price set by creator
   stripe_connect_account_id TEXT UNIQUE, -- Stripe Connect Express account ID
   stripe_connect_onboarding_complete BOOLEAN DEFAULT false,
   payout_schedule TEXT DEFAULT 'weekly' CHECK (payout_schedule IN ('daily', 'weekly', 'monthly')),
