@@ -1355,8 +1355,7 @@ export default function OnboardingPage() {
             <button
               className="welcome-option-button"
               onClick={() => {
-                // TODO: Handle discover creators
-                console.log('Discover creators clicked')
+                router.push('/fan-setup')
               }}
             >
               Discover creators
