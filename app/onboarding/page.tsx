@@ -63,6 +63,7 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     checkAuth()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Countdown timer for annual plan offer
@@ -808,7 +809,7 @@ export default function OnboardingPage() {
           <div className="creator-type-content display-name-content">
             <h1 className="creator-type-heading display-name-heading">Set your subscription price</h1>
             <p className="creator-type-description">
-              Set your monthly Subscription price for fans, don't worry you will be able to change this later.
+              Set your monthly Subscription price for fans, don&apos;t worry you will be able to change this later.
             </p>
 
             {/* Form fields */}
