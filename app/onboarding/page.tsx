@@ -60,6 +60,7 @@ export default function OnboardingPage() {
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual' | null>(null)
   const [timeRemaining, setTimeRemaining] = useState(24 * 60 * 60) // 24 hours in seconds
   const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [showWelcomePage, setShowWelcomePage] = useState(true)
 
   useEffect(() => {
     checkAuth()
@@ -89,8 +90,8 @@ export default function OnboardingPage() {
   }, [isLoading, isAuthenticated, router])
 
   useEffect(() => {
-    // Auto-slide for both desktop and mobile (skip if showing creator type selection)
-    if (!isAuthenticated || isLoading || showCreatorType) return
+    // Auto-slide for both desktop and mobile (skip if showing welcome page or creator type selection)
+    if (!isAuthenticated || isLoading || showWelcomePage || showCreatorType) return
 
     // Set up auto-slide interval
     const interval = setInterval(() => {
@@ -1321,6 +1322,53 @@ export default function OnboardingPage() {
               disabled={!selectedCreatorType}
             >
               Continue
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show welcome page
+  if (showWelcomePage) {
+    return (
+      <div className="onboarding-page welcome-page">
+        <div className="welcome-container">
+          {/* Logo */}
+          <div className="welcome-logo">
+            <Image
+              src="/logo.png"
+              alt="Fanrae"
+              width={200}
+              height={0}
+              style={{ height: 'auto', width: '200px' }}
+              priority
+            />
+          </div>
+
+          {/* Header */}
+          <h1 className="welcome-heading">Welcome to Fanrae</h1>
+          <p className="welcome-subheading">Let&apos;s get you started</p>
+
+          {/* Options */}
+          <div className="welcome-options">
+            <button
+              className="welcome-option-button"
+              onClick={() => {
+                // TODO: Handle discover creators
+                console.log('Discover creators clicked')
+              }}
+            >
+              Discover creators
+            </button>
+
+            <button
+              className="welcome-option-button"
+              onClick={() => {
+                setShowWelcomePage(false)
+              }}
+            >
+              Become a Creator
             </button>
           </div>
         </div>
