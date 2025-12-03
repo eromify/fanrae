@@ -30,3 +30,4 @@ fanrae dev/favicon.ico         ← NOT HERE!
 ✅ RIGHT - PUT HERE:
 fanrae dev/app/favicon.ico     ← YES, HERE!
 
+

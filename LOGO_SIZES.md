@@ -86,3 +86,4 @@ app/
 
 **TL;DR:** Your metadata logo should be **32x32 pixels** (PNG or ICO format) and placed in the `app/` directory.
 
+

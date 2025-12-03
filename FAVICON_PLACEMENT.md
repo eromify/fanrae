@@ -40,3 +40,4 @@ Next.js 14 automatically detects these filenames when placed in `app/`:
 
 Tell me the names of your files and I can help you place them correctly!
 
+
