@@ -21,12 +21,15 @@ export default function LoginPage() {
       setError(null)
       const supabase = createSupabaseClient()
       // Use window.location.origin to always get the current domain (works in both dev and production)
-      const redirectUrl = window.location.origin
+      // This ensures the redirect URL matches the current domain, not a hardcoded localhost
+      const redirectUrl = typeof window !== 'undefined' ? window.location.origin : ''
+      const fullRedirectUrl = `${redirectUrl}/onboarding`
+      
       // Redirect to onboarding - it will check payment status and redirect accordingly
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${redirectUrl}/onboarding`,
+          redirectTo: fullRedirectUrl,
         },
       })
       if (error) throw error
