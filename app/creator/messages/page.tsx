@@ -401,23 +401,32 @@ export default function CreatorMessagesPage() {
               <div className="creator-messages-chat-header">
                 <div className="creator-messages-chat-header-user">
                   <div className="creator-messages-chat-header-avatar">
-                    {otherUser.profile_image_url ? (
-                      <Image
-                        src={otherUser.profile_image_url}
-                        alt={('display_name' in otherUser && otherUser.display_name) ? (otherUser.display_name || otherUser.username) : otherUser.username}
-                        width={40}
-                        height={40}
-                        className="creator-messages-chat-header-avatar-image"
-                      />
-                    ) : (
-                      <div className="creator-messages-chat-header-avatar-placeholder">
-                        {(('display_name' in otherUser && otherUser.display_name?.[0]) || otherUser.username[0] || '?').toUpperCase()}
-                      </div>
-                    )}
+                    {(() => {
+                      const displayName = ('display_name' in otherUser && otherUser.display_name) ? otherUser.display_name : null
+                      const altText = displayName || otherUser.username
+                      const initial = displayName?.[0] || otherUser.username[0] || '?'
+                      
+                      return otherUser.profile_image_url ? (
+                        <Image
+                          src={otherUser.profile_image_url}
+                          alt={altText}
+                          width={40}
+                          height={40}
+                          className="creator-messages-chat-header-avatar-image"
+                        />
+                      ) : (
+                        <div className="creator-messages-chat-header-avatar-placeholder">
+                          {initial.toUpperCase()}
+                        </div>
+                      )
+                    })()}
                   </div>
                   <div className="creator-messages-chat-header-info">
                     <div className="creator-messages-chat-header-name">
-                      {('display_name' in otherUser && otherUser.display_name) ? otherUser.display_name : otherUser.username}
+                      {(() => {
+                        const displayName = ('display_name' in otherUser && otherUser.display_name) ? otherUser.display_name : null
+                        return displayName || otherUser.username
+                      })()}
                     </div>
                     <div className="creator-messages-chat-header-username">
                       @{otherUser.username}
