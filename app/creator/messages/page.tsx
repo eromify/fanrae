@@ -402,9 +402,9 @@ export default function CreatorMessagesPage() {
                 <div className="creator-messages-chat-header-user">
                   <div className="creator-messages-chat-header-avatar">
                     {(() => {
-                      const displayName = ('display_name' in otherUser && otherUser.display_name) ? otherUser.display_name : null
-                      const altText = displayName || otherUser.username
-                      const initial = displayName?.[0] || otherUser.username[0] || '?'
+                      const displayName: string | null = ('display_name' in otherUser && otherUser.display_name) ? (otherUser.display_name as string | null) : null
+                      const altText: string = displayName || otherUser.username
+                      const initial: string = (displayName && displayName[0]) || otherUser.username[0] || '?'
                       
                       return otherUser.profile_image_url ? (
                         <Image
@@ -424,7 +424,7 @@ export default function CreatorMessagesPage() {
                   <div className="creator-messages-chat-header-info">
                     <div className="creator-messages-chat-header-name">
                       {(() => {
-                        const displayName = ('display_name' in otherUser && otherUser.display_name) ? otherUser.display_name : null
+                        const displayName: string | null = ('display_name' in otherUser && otherUser.display_name) ? (otherUser.display_name as string | null) : null
                         return displayName || otherUser.username
                       })()}
                     </div>
